@@ -1,8 +1,8 @@
 {
   "name": "smart-paste-transformer",
   "displayName": "Smart Paste Transformer",
-  "description": "Clipboard text/path transformer with regex rules, Quick Pick, and current-file relative path variables.",
-  "version": "0.0.5",
+  "description": "Clipboard and selection text/path transformer with regex rules, Quick Pick, and current-file relative path variables.",
+  "version": "0.0.6",
   "publisher": "local",
   "engines": {
     "vscode": "^1.90.0"
@@ -11,21 +11,31 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:smartPaste.transformPaste"
+    "onCommand:smartPaste.smartPaste",
+    "onCommand:smartPaste.smartTransform"
   ],
   "main": "./extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "smartPaste.transformPaste",
-        "title": "Smart Paste: Transform Paste"
+        "command": "smartPaste.smartPaste",
+        "title": "✨Smart Paste"
+      },
+      {
+        "command": "smartPaste.smartTransform",
+        "title": "✨Smart Transform"
       }
     ],
     "keybindings": [
       {
-        "command": "smartPaste.transformPaste",
+        "command": "smartPaste.smartPaste",
         "key": "ctrl+shift+v",
         "when": "editorTextFocus"
+      },
+      {
+        "command": "smartPaste.smartTransform",
+        "key": "ctrl+alt+t",
+        "when": "editorTextFocus && editorHasSelection"
       }
     ],
     "configuration": {
@@ -93,16 +103,21 @@
         "smartPaste.fallbackToPlainPaste": {
           "type": "boolean",
           "default": true,
-          "description": "매칭되는 규칙이 없거나 선택을 취소했을 때 일반 붙여넣기처럼 클립보드 텍스트를 삽입합니다."
+          "description": "Smart Paste에서 매칭되는 규칙이 없거나 선택을 취소했을 때 일반 붙여넣기처럼 클립보드 텍스트를 삽입합니다. Smart Transform에는 적용되지 않습니다."
         }
       }
     },
     "menus": {
       "editor/context": [
         {
-          "command": "smartPaste.transformPaste",
+          "command": "smartPaste.smartPaste",
           "when": "editorTextFocus",
           "group": "navigation@99"
+        },
+        {
+          "command": "smartPaste.smartTransform",
+          "when": "editorTextFocus && editorHasSelection",
+          "group": "navigation@100"
         }
       ]
     }

@@ -186,7 +186,90 @@ async function insertText(editor, text) {
   });
 }
 
-async function transformPaste() {
+function getConfig() {
+  const config = vscode.workspace.getConfiguration("smartPaste");
+
+  return {
+    showOnlyMatchedRules: config.get("showOnlyMatchedRules", true),
+    fallbackToPlainPaste: config.get("fallbackToPlainPaste", true),
+  };
+}
+
+function getValidRules(sourceText, rules, showOnlyMatchedRules) {
+  const validRules = [];
+
+  for (const rule of rules) {
+    try {
+      const regex = createRegex(rule.find, rule.flags);
+      const isMatched = regex.test(sourceText);
+
+      if (!showOnlyMatchedRules || isMatched) {
+        validRules.push({ ...rule, isMatched });
+      }
+    } catch (error) {
+      validRules.push({ ...rule, error: error.message });
+    }
+  }
+
+  return validRules;
+}
+
+async function pickRule(validRules, placeHolder) {
+  return vscode.window.showQuickPick(
+    validRules.map((rule) => ({
+      label: rule.name,
+      rule,
+    })),
+    {
+      placeHolder,
+      matchOnDescription: false,
+      matchOnDetail: false,
+    },
+  );
+}
+
+function applyRule(sourceText, editor, rule) {
+  const variables = buildVariables(sourceText, editor);
+  const regex = createRegex(rule.find, rule.flags);
+  const replaceTemplate = applyVariables(rule.replace, variables);
+
+  return rule.mode === "template" ? replaceTemplate : sourceText.replace(regex, replaceTemplate);
+}
+
+async function runTransform({ sourceText, editor, placeHolder, fallbackText = "" }) {
+  const { showOnlyMatchedRules, fallbackToPlainPaste } = getConfig();
+  const rules = getRules();
+
+  if (!rules.length) {
+    if (fallbackToPlainPaste && fallbackText) await insertText(editor, fallbackText);
+    return;
+  }
+
+  const validRules = getValidRules(sourceText, rules, showOnlyMatchedRules);
+
+  if (!validRules.length) {
+    vscode.window.showInformationMessage("적용 가능한 Smart Paste 규칙이 없어요.");
+    if (fallbackToPlainPaste && fallbackText) await insertText(editor, fallbackText);
+    return;
+  }
+
+  const picked = await pickRule(validRules, placeHolder);
+
+  if (!picked) {
+    if (fallbackToPlainPaste && fallbackText) await insertText(editor, fallbackText);
+    return;
+  }
+
+  if (picked.rule.error) {
+    vscode.window.showErrorMessage(picked.rule.error);
+    return;
+  }
+
+  const result = applyRule(sourceText, editor, picked.rule);
+  await insertText(editor, result);
+}
+
+async function smartPaste() {
   const editor = vscode.window.activeTextEditor;
   if (!editor) {
     vscode.window.showInformationMessage("활성화된 에디터가 없어요.");
@@ -196,68 +279,41 @@ async function transformPaste() {
   const clipboardText = await vscode.env.clipboard.readText();
   if (!clipboardText) return;
 
-  const config = vscode.workspace.getConfiguration("smartPaste");
-  const showOnlyMatchedRules = config.get("showOnlyMatchedRules", false);
-  const fallbackToPlainPaste = config.get("fallbackToPlainPaste", true);
-  const rules = getRules();
+  await runTransform({
+    sourceText: clipboardText,
+    editor,
+    placeHolder: "붙여넣을 변환 규칙을 선택하세요",
+    fallbackText: clipboardText,
+  });
+}
 
-  if (!rules.length) {
-    if (fallbackToPlainPaste) await insertText(editor, clipboardText);
+async function smartTransform() {
+  const editor = vscode.window.activeTextEditor;
+  if (!editor) {
+    vscode.window.showInformationMessage("활성화된 에디터가 없어요.");
     return;
   }
 
-  const validRules = [];
-
-  for (const rule of rules) {
-    try {
-      const regex = createRegex(rule.find, rule.flags);
-      const isMatched = regex.test(clipboardText);
-      if (!showOnlyMatchedRules || isMatched) {
-        validRules.push({ ...rule, isMatched });
-      }
-    } catch (error) {
-      validRules.push({ ...rule, error: error.message });
-    }
-  }
-
-  if (!validRules.length) {
-    vscode.window.showInformationMessage("적용 가능한 Smart Paste 규칙이 없어요.");
-    if (fallbackToPlainPaste) await insertText(editor, clipboardText);
+  if (editor.selection.isEmpty) {
+    vscode.window.showInformationMessage("변환할 텍스트를 선택해 주세요.");
     return;
   }
 
-  const picked = await vscode.window.showQuickPick(
-    validRules.map((rule) => ({
-      label: rule.name,
-      rule,
-    })),
-    {
-      placeHolder: "붙여넣을 변환 규칙을 선택하세요",
-      matchOnDescription: false,
-      matchOnDetail: false,
-    },
-  );
+  const selectedText = editor.document.getText(editor.selection);
+  if (!selectedText) return;
 
-  if (!picked) {
-    if (fallbackToPlainPaste) await insertText(editor, clipboardText);
-    return;
-  }
-
-  if (picked.rule.error) {
-    vscode.window.showErrorMessage(picked.rule.error);
-    return;
-  }
-
-  const variables = buildVariables(clipboardText, editor);
-  const regex = createRegex(picked.rule.find, picked.rule.flags);
-  const replaceTemplate = applyVariables(picked.rule.replace, variables);
-  const result = picked.rule.mode === "template" ? replaceTemplate : clipboardText.replace(regex, replaceTemplate);
-
-  await insertText(editor, result);
+  await runTransform({
+    sourceText: selectedText,
+    editor,
+    placeHolder: "선택 영역에 적용할 변환 규칙을 선택하세요",
+  });
 }
 
 function activate(context) {
-  context.subscriptions.push(vscode.commands.registerCommand("smartPaste.transformPaste", transformPaste));
+  context.subscriptions.push(
+    vscode.commands.registerCommand("smartPaste.smartPaste", smartPaste),
+    vscode.commands.registerCommand("smartPaste.smartTransform", smartTransform),
+  );
 }
 
 function deactivate() {}
