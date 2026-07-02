@@ -1,6 +1,14 @@
 const vscode = require("vscode");
 const path = require("path");
 const fs = require("fs");
+const postcss = require("postcss");
+let postcssScss = null;
+
+try {
+  postcssScss = require("postcss-scss");
+} catch (error) {
+  postcssScss = null;
+}
 
 function normalizeSlash(value) {
   return String(value || "").replace(/\\/g, "/");
@@ -166,7 +174,7 @@ function createRegex(find, flags = "") {
 }
 
 function getRules() {
-  const config = vscode.workspace.getConfiguration("smartPaste");
+  const config = vscode.workspace.getConfiguration("smartTransformer");
   const rules = config.get("rules") || {};
 
   return Object.entries(rules)
@@ -177,7 +185,13 @@ function getRules() {
       replace: rule.replace,
       flags: rule.flags || "",
       mode: rule.mode || "replace",
+      when: rule.when || "always",
     }));
+}
+
+function getCssPropertyOrder() {
+  const config = vscode.workspace.getConfiguration("smartTransformer");
+  return config.get("cssPropertyOrder") || [];
 }
 
 async function insertText(editor, text) {
@@ -187,7 +201,7 @@ async function insertText(editor, text) {
 }
 
 function getConfig() {
-  const config = vscode.workspace.getConfiguration("smartPaste");
+  const config = vscode.workspace.getConfiguration("smartTransformer");
 
   return {
     showOnlyMatchedRules: config.get("showOnlyMatchedRules", true),
@@ -195,10 +209,76 @@ function getConfig() {
   };
 }
 
-function getValidRules(sourceText, rules, showOnlyMatchedRules) {
+function getDocumentOffset(editor, position) {
+  return editor.document.offsetAt(position);
+}
+
+function isInStyleTag(editor) {
+  const languageId = editor.document.languageId;
+
+  if (!["html", "astro", "vue", "svelte"].includes(languageId)) {
+    return false;
+  }
+
+  const text = editor.document.getText();
+  const offset = getDocumentOffset(editor, editor.selection.active);
+  const before = text.slice(0, offset);
+  const after = text.slice(offset);
+
+  const lowerBefore = before.toLowerCase();
+  const lowerAfter = after.toLowerCase();
+  const lastStyleOpen = lowerBefore.lastIndexOf("<style");
+  const lastStyleClose = lowerBefore.lastIndexOf("</style>");
+  const nextStyleClose = lowerAfter.indexOf("</style>");
+
+  return lastStyleOpen > lastStyleClose && nextStyleClose !== -1;
+}
+
+function isCssLikeContext(editor) {
+  const languageId = editor.document.languageId;
+  if (["css", "scss", "sass", "less"].includes(languageId)) {
+    return true;
+  }
+  return isInStyleTag(editor);
+}
+
+function getCurrentFileName(editor) {
+  return path.posix.basename(normalizeSlash(editor.document.uri.fsPath));
+}
+
+function getCurrentExt(editor) {
+  return path.posix.extname(normalizeSlash(editor.document.uri.fsPath)).replace(".", "");
+}
+
+function isRuleAllowedInContext(rule, editor) {
+  const conditions = Array.isArray(rule.when) ? rule.when : [rule.when || "always"];
+  const normalizedConditions = conditions.map((condition) => String(condition).toLowerCase());
+  const languageId = editor.document.languageId.toLowerCase();
+  const fileName = getCurrentFileName(editor).toLowerCase();
+  const ext = getCurrentExt(editor).toLowerCase();
+
+  if (normalizedConditions.includes("always")) return true;
+  if (normalizedConditions.includes("css") && isCssLikeContext(editor)) {
+    return true;
+  }
+  if (
+    normalizedConditions.includes(languageId) ||
+    normalizedConditions.includes(ext) ||
+    normalizedConditions.includes(fileName)
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function getValidRules(sourceText, rules, showOnlyMatchedRules, editor) {
   const validRules = [];
 
   for (const rule of rules) {
+    if (!isRuleAllowedInContext(rule, editor)) {
+      continue;
+    }
+
     try {
       const regex = createRegex(rule.find, rule.flags);
       const isMatched = regex.test(sourceText);
@@ -228,12 +308,114 @@ async function pickRule(validRules, placeHolder) {
   );
 }
 
+function getCssPropertyName(line) {
+  const match = line.match(/^\s*((?:--)?-?[_a-zA-Z][\w-]*)\s*:/);
+  return match ? match[1] : "";
+}
+
+function normalizeCssPropertyName(propertyName) {
+  return String(propertyName || "")
+    .toLowerCase()
+    .replace(/^-(webkit|moz|ms|o)-/, "");
+}
+
+function getCssPropertyRank(propertyName, order) {
+  const normalizedProperty = normalizeCssPropertyName(propertyName);
+  const normalizedOrder = order.map(normalizeCssPropertyName);
+  const exactIndex = normalizedOrder.indexOf(normalizedProperty);
+
+  if (exactIndex !== -1) return exactIndex;
+
+  const shorthandIndex = normalizedOrder.findIndex((item) => normalizedProperty.startsWith(`${item}-`));
+  if (shorthandIndex !== -1) return shorthandIndex + 0.1;
+
+  return Number.MAX_SAFE_INTEGER;
+}
+
+function sortDeclarationsInContainer(container, order) {
+  if (!container || !Array.isArray(container.nodes)) return;
+
+  const declarationSlots = [];
+
+  container.nodes.forEach((node, index) => {
+    if (node.type === "decl") {
+      declarationSlots.push({
+        index,
+        node,
+        originalIndex: index,
+        rank: getCssPropertyRank(node.prop, order),
+      });
+      return;
+    }
+
+    if (node.nodes) {
+      sortDeclarationsInContainer(node, order);
+    }
+  });
+
+  if (declarationSlots.length < 2) return;
+
+  const sortedDeclarations = [...declarationSlots]
+    .sort((a, b) => {
+      if (a.rank !== b.rank) return a.rank - b.rank;
+      return a.originalIndex - b.originalIndex;
+    })
+    .map((item) => item.node);
+
+  declarationSlots.forEach((slot, index) => {
+    container.nodes[slot.index] = sortedDeclarations[index];
+  });
+}
+function sortCssDeclarations(sourceText, order) {
+  if (!Array.isArray(order) || !order.length) {
+    vscode.window.showInformationMessage("CSS property order가 설정되어 있지 않아요.");
+    return sourceText;
+  }
+
+  const text = String(sourceText || "");
+  const hasBalancedBlock = (text.match(/{/g) || []).length === (text.match(/}/g) || []).length && /[{}]/.test(text);
+
+  const parseText = hasBalancedBlock ? text : `.__smart_transform__ {\n${text}\n}`;
+
+  try {
+    const root = postcssScss
+      ? postcssScss.parse(parseText, { from: undefined })
+      : postcss.parse(parseText, { from: undefined });
+    sortDeclarationsInContainer(root, order);
+
+    if (!hasBalancedBlock) {
+      const wrapper = root.nodes.find((node) => node.type === "rule" && node.selector === ".__smart_transform__");
+
+      if (wrapper) {
+        return wrapper.nodes
+          .map((node) => {
+            const text = node.toString();
+            if (node.type === "decl" && !text.trim().endsWith(";")) {
+              return `${text};`;
+            }
+            return text;
+          })
+          .join("\n");
+      }
+      return sourceText;
+    }
+
+    return root.toString();
+  } catch (error) {
+    vscode.window.showErrorMessage(`CSS 정렬 중 오류가 발생했어요: ${error.message}`);
+    return sourceText;
+  }
+}
+
 function applyRule(sourceText, editor, rule) {
   const variables = buildVariables(sourceText, editor);
   const regex = createRegex(rule.find, rule.flags);
   const replaceTemplate = applyVariables(rule.replace, variables);
 
-  return rule.mode === "template" ? replaceTemplate : sourceText.replace(regex, replaceTemplate);
+  if (rule.mode === "template") return replaceTemplate;
+  if (rule.mode === "cssSort") return sortCssDeclarations(sourceText, getCssPropertyOrder());
+
+  return sourceText.replace(regex, replaceTemplate);
 }
 
 async function runTransform({ sourceText, editor, placeHolder, fallbackText = "" }) {
@@ -245,10 +427,10 @@ async function runTransform({ sourceText, editor, placeHolder, fallbackText = ""
     return;
   }
 
-  const validRules = getValidRules(sourceText, rules, showOnlyMatchedRules);
+  const validRules = getValidRules(sourceText, rules, showOnlyMatchedRules, editor);
 
   if (!validRules.length) {
-    vscode.window.showInformationMessage("적용 가능한 Smart Paste 규칙이 없어요.");
+    vscode.window.showInformationMessage("적용 가능한 Smart Transformer 규칙이 없어요.");
     if (fallbackToPlainPaste && fallbackText) await insertText(editor, fallbackText);
     return;
   }
@@ -311,8 +493,8 @@ async function smartTransform() {
 
 function activate(context) {
   context.subscriptions.push(
-    vscode.commands.registerCommand("smartPaste.smartPaste", smartPaste),
-    vscode.commands.registerCommand("smartPaste.smartTransform", smartTransform),
+    vscode.commands.registerCommand("smartTransformer.smartPaste", smartPaste),
+    vscode.commands.registerCommand("smartTransformer.smartTransform", smartTransform),
   );
 }
 

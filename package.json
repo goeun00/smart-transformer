@@ -1,65 +1,111 @@
 {
-  "name": "smart-paste-transformer",
-  "displayName": "Smart Paste Transformer",
-  "description": "Clipboard and selection text/path transformer with regex rules, Quick Pick, and current-file relative path variables.",
-  "version": "0.0.6",
-  "publisher": "local",
+  "name": "smart-transformer",
+  "displayName": "Smart Transformer",
+  "description": "Transform clipboard and selected text with regex rules, templates, relative path variables, and CSS declaration sorting.",
+  "version": "0.1.1",
+  "publisher": "goeun",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/깃허브아이디/smart-transformer.git"
+  },
   "engines": {
     "vscode": "^1.90.0"
   },
   "categories": [
-    "Other"
+    "Formatters"
   ],
+  "keywords": [
+    "transform",
+    "paste",
+    "clipboard",
+    "regex",
+    "template",
+    "formatter",
+    "css",
+    "scss",
+    "sort",
+    "import"
+  ],
+  "icon": "images/icon.png",
   "activationEvents": [
-    "onCommand:smartPaste.smartPaste",
-    "onCommand:smartPaste.smartTransform"
+    "onCommand:smartTransformer.smartPaste",
+    "onCommand:smartTransformer.smartTransform"
   ],
   "main": "./extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "smartPaste.smartPaste",
-        "title": "✨Smart Paste"
+        "command": "smartTransformer.smartPaste",
+        "title": "🦦 Smart Paste ✨",
+        "group": "1_modification@90"
       },
       {
-        "command": "smartPaste.smartTransform",
-        "title": "✨Smart Transform"
+        "command": "smartTransformer.smartTransform",
+        "title": "🦦 Smart Transform ✨",
+        "group": "1_modification@91"
       }
     ],
     "keybindings": [
       {
-        "command": "smartPaste.smartPaste",
+        "command": "smartTransformer.smartPaste",
         "key": "ctrl+shift+v",
         "when": "editorTextFocus"
       },
       {
-        "command": "smartPaste.smartTransform",
-        "key": "ctrl+alt+t",
+        "command": "smartTransformer.smartTransform",
+        "key": "ctrl+shift+r",
         "when": "editorTextFocus && editorHasSelection"
       }
     ],
     "configuration": {
-      "title": "Smart Paste Transformer",
+      "title": "Smart Transformer",
       "properties": {
-        "smartPaste.rules": {
+        "smartTransformer.rules": {
           "type": "object",
           "default": {
             "Component import": {
               "find": "\\.(astro|jsx|tsx|js|ts|mjs|cjs)$",
               "replace": "import {{pascalName}} from '{{relativePathAuto}}';",
               "flags": "i",
-              "mode": "template"
+              "mode": "template",
+              "when": [
+                "html",
+                "astro",
+                "jsx",
+                "tsx"
+              ]
             },
             "Style import": {
               "find": "\\.(css|scss|sass|less)$",
               "replace": "import '{{relativePath}}';",
               "flags": "i",
-              "mode": "template"
+              "mode": "template",
+              "when": [
+                "html",
+                "astro",
+                "jsx",
+                "tsx"
+              ]
             },
             "줄바꿈 → li": {
               "find": "^(.+)$",
               "replace": "<li>$1</li>",
-              "flags": "gm"
+              "flags": "gm",
+              "when": [
+                "html",
+                "astro",
+                "jsx",
+                "tsx"
+              ]
+            },
+            "CSS declaration sort": {
+              "find": ".*",
+              "replace": "",
+              "flags": "s",
+              "mode": "cssSort",
+              "when": [
+                "css"
+              ]
             }
           },
           "description": "변환 규칙입니다. 객체의 key가 Quick Pick에 표시되는 이름입니다.",
@@ -68,25 +114,35 @@
             "properties": {
               "find": {
                 "type": "string",
-                "description": "찾을 정규식 패턴입니다."
+                "description": "찾을 정규식 패턴입니다. cssSort 모드에서는 규칙 노출 여부를 판단하는 용도로만 사용됩니다."
               },
               "replace": {
                 "type": "string",
-                "description": "치환할 템플릿입니다. $1 같은 정규식 캡처와 {{relativePath}} 같은 변수를 사용할 수 있습니다."
+                "description": "치환할 템플릿입니다. $1 같은 정규식 캡처와 {{relativePath}} 같은 변수를 사용할 수 있습니다. cssSort 모드에서는 사용하지 않습니다."
               },
               "flags": {
                 "type": "string",
                 "default": "",
-                "description": "정규식 플래그입니다. 예: g, i, m, gm, gi"
+                "description": "정규식 플래그입니다. 예: g, i, m, gm, gi, s"
               },
               "mode": {
                 "type": "string",
                 "enum": [
                   "replace",
-                  "template"
+                  "template",
+                  "cssSort"
                 ],
                 "default": "replace",
-                "description": "replace는 원문에서 find 부분만 치환하고, template은 replace 결과만 삽입합니다. import처럼 원본 경로를 없애야 하면 template을 사용하세요."
+                "description": "replace는 원문에서 find 부분만 치환하고, template은 replace 결과만 삽입합니다. cssSort는 선택 영역의 CSS 선언 순서를 정렬합니다."
+              },
+              "when": {
+                "type": "string",
+                "enum": [
+                  "always",
+                  "css"
+                ],
+                "default": "always",
+                "description": "규칙을 Quick Pick에 표시할 컨텍스트입니다. always는 항상 표시하고, css는 CSS/SCSS/Less/Sass 파일 또는 HTML/Astro/Vue/Svelte의 <style> 안에서만 표시합니다."
               }
             },
             "required": [
@@ -95,12 +151,94 @@
             ]
           }
         },
-        "smartPaste.showOnlyMatchedRules": {
+        "smartTransformer.cssPropertyOrder": {
+          "type": "array",
+          "default": [
+            "display",
+            "visibility",
+            "overflow",
+            "overflow-x",
+            "overflow-y",
+            "opacity",
+            "content",
+            "float",
+            "clear",
+            "position",
+            "top",
+            "right",
+            "bottom",
+            "left",
+            "z-index",
+            "box-sizing",
+            "max-width",
+            "width",
+            "min-width",
+            "max-height",
+            "height",
+            "min-height",
+            "margin",
+            "margin-top",
+            "margin-right",
+            "margin-bottom",
+            "margin-left",
+            "padding",
+            "padding-top",
+            "padding-right",
+            "padding-bottom",
+            "padding-left",
+            "border",
+            "border-width",
+            "border-style",
+            "border-color",
+            "border-top",
+            "border-right",
+            "border-bottom",
+            "border-left",
+            "border-radius",
+            "background",
+            "background-color",
+            "background-image",
+            "background-position",
+            "background-repeat",
+            "background-size",
+            "font-size",
+            "font-weight",
+            "font-style",
+            "font-family",
+            "color",
+            "line-height",
+            "letter-spacing",
+            "white-space",
+            "word-break",
+            "vertical-align",
+            "text-align",
+            "text-decoration",
+            "text-overflow",
+            "transform",
+            "transform-origin",
+            "transition",
+            "transition-property",
+            "transition-duration",
+            "transition-timing-function",
+            "transition-delay",
+            "flex",
+            "flex-direction",
+            "flex-shrink",
+            "flex-wrap",
+            "justify-content",
+            "align-items"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "description": "CSS declaration sort 모드에서 사용할 CSS 속성 정렬 순서입니다. 비어 있으면 정렬하지 않습니다. 목록에 포함된 속성은 설정한 순서대로 정렬되고, 목록에 없는 속성은 기존 순서를 유지한 채 뒤쪽에 배치됩니다."
+        },
+        "smartTransformer.showOnlyMatchedRules": {
           "type": "boolean",
           "default": true,
-          "description": "true면 클립보드 텍스트와 find가 매칭되는 규칙만 Quick Pick에 표시합니다."
+          "description": "true면 source text와 find가 매칭되는 규칙만 Quick Pick에 표시합니다."
         },
-        "smartPaste.fallbackToPlainPaste": {
+        "smartTransformer.fallbackToPlainPaste": {
           "type": "boolean",
           "default": true,
           "description": "Smart Paste에서 매칭되는 규칙이 없거나 선택을 취소했을 때 일반 붙여넣기처럼 클립보드 텍스트를 삽입합니다. Smart Transform에는 적용되지 않습니다."
@@ -110,12 +248,12 @@
     "menus": {
       "editor/context": [
         {
-          "command": "smartPaste.smartPaste",
+          "command": "smartTransformer.smartPaste",
           "when": "editorTextFocus",
           "group": "navigation@99"
         },
         {
-          "command": "smartPaste.smartTransform",
+          "command": "smartTransformer.smartTransform",
           "when": "editorTextFocus && editorHasSelection",
           "group": "navigation@100"
         }
@@ -127,5 +265,9 @@
   },
   "devDependencies": {
     "@vscode/vsce": "^3.0.0"
+  },
+  "dependencies": {
+    "postcss": "^8.5.16",
+    "postcss-scss": "^4.0.9"
   }
 }

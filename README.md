@@ -1,89 +1,49 @@
-# 🧃 Smart Paste Transformer
+<p align="center">
+  <img src="https://raw.githubusercontent.com/goeun00/smart-transformer/main/images/mascot.png" width="450" alt="Smart Transformer otter mascot" />
+</p>
 
-클립보드에 복사한 텍스트나 파일 경로, 또는 현재 선택한 텍스트를 원하는 형태로 변환하는 VS Code 확장입니다.
+<h1 align="center">🧃 Smart Transformer</h1>
 
-파일 경로를 복사한 뒤 `Ctrl + shift + V`를 누르면 중앙 상단 선택창(Quick Pick)에서 원하는 규칙을 고르고 아래처럼 변환할 수 있습니다.
-
-```js
-import Button from "./Button";
-import ReturnInfo from "./ReturnInfo.astro";
-import "./button.scss";
-```
-
-선택한 텍스트도 바로 변환할 수 있습니다.
-
-```txt
-사과
-바나나
-포도
-```
-
-↓
-
-```html
-<li>사과</li>
-<li>바나나</li>
-<li>포도</li>
-```
+<p align="center">
+  클립보드 텍스트, 파일 경로, 선택 영역을 원하는 코드 형태로 바꿔주는 VS Code 확장입니다.
+</p>
 
 ---
 
-# ✨ 주요 기능
+## ✨ 주요 기능
 
-- 클립보드 텍스트를 규칙에 맞게 변환하는 **Smart Paste** 지원
-- 선택 영역을 규칙에 맞게 변환하는 **Smart Transform** 지원
-- 중앙 상단 Quick Pick에서 규칙 제목만 보고 선택
-- 규칙 이름을 사용자가 직접 설정 가능
-- 정규식 `flags` 직접 설정 가능
-- 현재 열려 있는 파일 기준 상대 경로 자동 계산
-- `src/...`, `workspaces/...` 같은 상대 경로를 워크스페이스 기준으로 자동 보정
-- `$1`, `$2` 같은 정규식 캡처 지원
-- `{{relativePath}}`, `{{relativePathAuto}}`, `{{pascalName}}` 등 다양한 템플릿 변수 지원
-- 선택 영역이 있으면 변환 결과로 교체, 없으면 커서 위치에 삽입
+| 기능                | 설명                                                      |
+| ------------------- | --------------------------------------------------------- |
+| **Smart Paste**     | 클립보드 내용을 규칙에 맞게 변환해서 붙여넣습니다.        |
+| **Smart Transform** | 선택한 텍스트를 규칙에 맞게 바로 변환합니다.              |
+| **Regex rules**     | `find`, `replace`, `flags` 기반으로 자유롭게 변환합니다.  |
+| **Relative path**   | 현재 열려 있는 파일 기준으로 상대 경로를 자동 계산합니다. |
+| **CSS sort**        | 선택한 CSS/SCSS 선언부를 사용자 지정 순서대로 정렬합니다. |
 
 ---
 
-# ⌨️ 사용 방법
+## ⌨️ 사용 방법
 
-## Smart Paste
-
-클립보드 내용을 변환해서 붙여넣습니다.
-
-1. 변환하고 싶은 텍스트나 파일 경로를 복사합니다.
-2. 결과를 넣고 싶은 파일을 엽니다.
-3. `Ctrl + shift + V`를 누릅니다.
-4. 중앙 상단 Quick Pick에서 원하는 규칙을 선택합니다.
-5. 선택한 규칙대로 변환된 결과가 삽입됩니다.
+| 명령              | 단축키                                            | 사용 상황                         |
+| ----------------- | ------------------------------------------------- | --------------------------------- |
+| `Smart Paste`     | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>V</kbd> | 클립보드 텍스트/경로 변환 후 삽입 |
+| `Smart Transform` | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd> | 선택 영역을 변환하여 교체         |
 
 우클릭 메뉴에서도 실행할 수 있습니다.
 
 ```txt
 Smart Paste
-```
-
-## Smart Transform
-
-현재 선택한 텍스트를 변환합니다.
-
-1. 변환하고 싶은 텍스트를 선택합니다.
-2. `Ctrl + Alt + T`를 누릅니다.
-3. 중앙 상단 Quick Pick에서 원하는 규칙을 선택합니다.
-4. 선택 영역이 변환 결과로 교체됩니다.
-
-우클릭 메뉴에서도 실행할 수 있습니다.
-
-```txt
 Smart Transform
 ```
 
 ---
 
-# ⚙️ 설정 구조
+## ⚙️ 기본 설정
 
-VS Code `settings.json`에 아래처럼 설정합니다.
+VS Code의 `settings.json`에서 규칙을 설정합니다.
 
 ```json
-"smartPaste.rules": {
+"smartTransformer.rules": {
   "Component import": {
     "find": "\\.(astro|jsx|tsx|js|ts|mjs|cjs)$",
     "replace": "import {{pascalName}} from '{{relativePathAuto}}';",
@@ -100,31 +60,30 @@ VS Code `settings.json`에 아래처럼 설정합니다.
     "find": "^(.+)$",
     "replace": "<li>$1</li>",
     "flags": "gm"
+  },
+  "CSS declaration sort": {
+    "find": ".*",
+    "replace": "",
+    "flags": "s",
+    "mode": "cssSort",
+    "when":["css"]
   }
 }
 ```
 
-객체의 **key**가 Quick Pick에 표시되는 이름입니다.
-
-예를 들어
+객체의 key가 Quick Pick에 표시되는 이름입니다.
 
 ```json
 "줄바꿈 → li": {}
 ```
 
-처럼 설정하면 선택창에는 아래 제목만 표시됩니다.
-
-```txt
-줄바꿈 → li
-```
+위처럼 설정하면 선택창에는 `줄바꿈 → li`만 표시됩니다.
 
 ---
 
-# 🧩 Component import
+## 🧩 Component import
 
-`{{pascalName}}`을 사용하면 파일명을 컴포넌트명에 어울리는 PascalCase로 변환합니다.
-
-`{{relativePathAuto}}`를 사용하면 JS/TS 계열은 확장자를 제거하고 Astro는 확장자를 유지합니다.
+`{{relativePathAuto}}`는 JS/TS 계열 확장자는 제거하고, Astro처럼 확장자가 필요한 파일은 유지합니다.
 
 ```json
 "Component import": {
@@ -135,45 +94,14 @@ VS Code `settings.json`에 아래처럼 설정합니다.
 }
 ```
 
-React 예시
-
-```txt
-src/components/button.jsx
-```
-
-↓
-
-```js
-import Button from "./button";
-```
-
-Kebab case 예시
-
-```txt
-src/components/include-test.jsx
-```
-
-↓
-
-```js
-import IncludeTest from "./include-test";
-```
-
-Astro 예시
-
-```txt
-src/components/return-info.astro
-```
-
-↓
-
-```js
-import ReturnInfo from "./return-info.astro";
-```
+| 복사한 경로                       | 결과                                                       |
+| --------------------------------- | ---------------------------------------------------------- |
+| `src/components/include-test.jsx` | `import IncludeTest from './include-test';`                |
+| `src/components/ReturnInfo.astro` | `import ReturnInfo from '../components/ReturnInfo.astro';` |
 
 ---
 
-# 🎨 Style import
+## 🎨 Style import
 
 ```json
 "Style import": {
@@ -184,200 +112,224 @@ import ReturnInfo from "./return-info.astro";
 }
 ```
 
-예시
-
-```txt
-src/styles/button.scss
-```
-
-↓
-
 ```js
 import "./button.scss";
 ```
 
 ---
 
-# 🔍 find / replace / flags / mode
+## 🧹 CSS declaration sort
 
-## find
-
-찾을 정규식입니다.
-
-```json
-"find": "^(.+)$"
-```
-
----
-
-## replace
-
-변환 결과입니다.
+선택 영역 안의 CSS/SCSS 선언을 `smartTransformer.cssPropertyOrder` 순서대로 정렬합니다.
+(! 선언부만 선택하거나 블록 전체를 선택해 주세요 )
+기본적으로 아래 순서를 사용하며, 필요하면 `settings.json`에서 자유롭게 변경할 수 있습니다.
 
 ```json
-"replace": "<li>$1</li>"
+"smartTransformer.cssPropertyOrder": [
+  "display",
+  "visibility",
+  "overflow",
+  "overflow-x",
+  "overflow-y",
+  "opacity",
+  "content",
+  "float",
+  "clear",
+  "position",
+  "top",
+  "right",
+  "bottom",
+  "left",
+  "z-index",
+  "box-sizing",
+  "max-width",
+  "width",
+  "min-width",
+  "max-height",
+  "height",
+  "min-height",
+  "margin",
+  "margin-top",
+  "margin-right",
+  "margin-bottom",
+  "margin-left",
+  "padding",
+  "padding-top",
+  "padding-right",
+  "padding-bottom",
+  "padding-left",
+  "border",
+  "border-width",
+  "border-style",
+  "border-color",
+  "border-top",
+  "border-right",
+  "border-bottom",
+  "border-left",
+  "border-radius",
+  "background",
+  "background-color",
+  "background-image",
+  "background-position",
+  "background-repeat",
+  "background-size",
+  "font-size",
+  "font-weight",
+  "font-style",
+  "font-family",
+  "color",
+  "line-height",
+  "letter-spacing",
+  "white-space",
+  "word-break",
+  "vertical-align",
+  "text-align",
+  "text-decoration",
+  "text-overflow",
+  "transform",
+  "transform-origin",
+  "transition",
+  "transition-property",
+  "transition-duration",
+  "transition-timing-function",
+  "transition-delay",
+  "flex",
+  "flex-direction",
+  "flex-shrink",
+  "flex-wrap",
+  "justify-content",
+  "align-items"
+]
 ```
 
-정규식 캡처를 사용할 수 있습니다.
+선택 전:
 
-```txt
-$1
-$2
-$3
-...
-```
+```scss
+.box {
+  color: #000;
+  display: flex;
+  margin-top: 10px;
+  position: relative;
 
-또한 Smart Paste에서 제공하는 변수도 사용할 수 있습니다.
+  @media (min-width: 768px) {
+    margin: 0;
+    position: sticky;
+  }
 
-```txt
-{{text}}
-{{path}}
-{{relativePath}}
-{{relativePathAuto}}
-{{pascalName}}
-```
-
----
-
-## flags
-
-정규식 플래그입니다.
-
-```json
-"flags": "gm"
-```
-
-자주 사용하는 플래그
-
-| 플래그 | 설명                                          |
-| ------ | --------------------------------------------- |
-| g      | 전체에서 반복 매칭                            |
-| i      | 대소문자 무시                                 |
-| m      | 여러 줄 모드 (`^`, `$`가 각 줄 기준으로 동작) |
-| s      | 줄바꿈까지 `.`에 포함                         |
-| u      | 유니코드 모드                                 |
-
----
-
-## mode
-
-`mode`는 변환 방식을 지정하는 옵션입니다.
-
-### replace (기본값)
-
-`find`에 매칭된 내용을 `replace` 값으로 치환합니다.
-
-```json
-"줄바꿈 → li": {
-  "find": "^(.+)$",
-  "replace": "<li>$1</li>",
-  "flags": "gm"
+  .child {
+    color: red;
+    display: block;
+  }
 }
 ```
 
-예를 들어
+`Smart Transform` → `CSS declaration sort` 선택 후:
 
-```txt
-사과
-바나나
-포도
-```
+```scss
+.box {
+  display: flex;
+  position: relative;
+  margin-top: 10px;
+  color: #000;
 
-↓
+  @media (min-width: 768px) {
+    position: sticky;
+    margin: 0;
+  }
 
-```html
-<li>사과</li>
-<li>바나나</li>
-<li>포도</li>
-```
-
-처럼 **텍스트를 정규식으로 변환**할 때 사용합니다.
-
----
-
-### template
-
-`find`는 **규칙이 적용될지 판단하는 용도**로만 사용하고, `replace` 문자열 전체를 새로운 결과로 생성합니다.
-
-```json
-"Component import": {
-  "find": "\\.(astro|jsx|tsx|js|ts|mjs|cjs)$",
-  "replace": "import {{pascalName}} from '{{relativePathAuto}}';",
-  "flags": "i",
-  "mode": "template"
+  .child {
+    display: block;
+    color: red;
+  }
 }
 ```
 
-예를 들어
-
-```txt
-src/components/return-info.astro
-```
-
-↓
-
-```js
-import ReturnInfo from "./return-info.astro";
-```
-
-처럼 **새로운 문장을 생성**할 때 사용합니다.
-
-| mode     | 용도                               |
-| -------- | ---------------------------------- |
-| replace  | 기존 텍스트를 정규식으로 치환      |
-| template | 원본을 기반으로 새로운 문자열 생성 |
+> `smartTransformer.cssPropertyOrder`에 포함된 속성은 설정한 순서대로 정렬됩니다.  
+> 목록에 없는 속성은 기존 순서를 유지한 채 뒤쪽에 배치됩니다.
 
 ---
 
-# 🧪 사용할 수 있는 변수
+## 🔍 find / replace / flags / mode / when
+
+| 옵션      | 설명                                                                                       |
+| --------- | ------------------------------------------------------------------------------------------ |
+| `find`    | 매칭할 JavaScript 정규식 문자열입니다.                                                     |
+| `replace` | 변환 결과입니다. `$1`, `$2` 같은 캡처와 `{{relativePath}}` 같은 변수를 사용할 수 있습니다. |
+| `flags`   | `g`, `i`, `m`, `s`, `u` 같은 정규식 플래그입니다.                                          |
+| `mode`    | `replace`, `template`, `cssSort` 중 하나를 사용합니다.                                     |
+| `when`    | 규칙을 Quick Pick에 표시할 컨텍스트입니다. `always`, `css`를 사용할 수 있습니다.           |
+
+### mode
+
+| mode       | 용도                                                                               |
+| ---------- | ---------------------------------------------------------------------------------- |
+| `replace`  | 원본 텍스트에서 `find`에 매칭된 부분을 `replace`로 치환합니다.                     |
+| `template` | `find`는 매칭 여부만 확인하고, `replace` 전체를 새로운 결과로 생성합니다.          |
+| `cssSort`  | 선택 영역의 CSS 선언 순서를 `smartTransformer.cssPropertyOrder`에 맞춰 정렬합니다. |
+
+### when
+
+| when                | 표시 조건                                                                           |
+| ------------------- | ----------------------------------------------------------------------------------- |
+| `always`            | 항상 Quick Pick에 표시합니다.                                                       |
+| `css`               | CSS/SCSS/Sass/Less 파일 또는 HTML/Astro/Vue/Svelte의 `<style>` 안에서만 표시합니다. |
+| `astro`,`html`, ... | astro/html 등 원하는 파일 형식에서만 표시합니다.                                    |
+
+예를 들어 CSS 정렬 기능은 CSS 영역에서만 보이게 설정할 수 있습니다.
+
+```json
+"CSS declaration sort": {
+  "find": ".*",
+  "replace": "",
+  "flags": "s",
+  "mode": "cssSort",
+  "when": "css"
+}
+```
+
+---
+
+## 🧪 사용할 수 있는 변수
 
 | 변수                    | 설명                                                            |
 | ----------------------- | --------------------------------------------------------------- |
 | `{{text}}`              | 클립보드 원본 텍스트 또는 선택한 원본 텍스트                    |
-| `{{path}}`              | 정리된 원본 경로                                                |
-| `{{pathNoExt}}`         | 원본 경로 (확장자 제외)                                         |
+| `{{path}}`              | 따옴표 제거, 슬래시 정리 등이 적용된 원본 경로                  |
+| `{{pathNoExt}}`         | `{{path}}`에서 확장자를 제거한 값                               |
 | `{{relativePath}}`      | 현재 파일 기준 상대 경로                                        |
-| `{{relativePathNoExt}}` | 상대 경로 (확장자 제외)                                         |
-| `{{relativePathAuto}}`  | JS/TS는 확장자 제거, 그 외는 유지                               |
-| `{{name}}`              | 파일명 (확장자 제외)                                            |
+| `{{relativePathNoExt}}` | `{{relativePath}}`에서 확장자를 제거한 값                       |
+| `{{relativePathAuto}}`  | JS/TS 계열은 확장자 제거, 그 외 확장자는 유지                   |
+| `{{name}}`              | 확장자를 제외한 파일명                                          |
 | `{{pascalName}}`        | `{{name}}`을 PascalCase로 변환 (`include-test` → `IncludeTest`) |
-| `{{fileName}}`          | 파일명 (확장자 포함)                                            |
+| `{{fileName}}`          | 확장자를 포함한 파일명                                          |
 | `{{ext}}`               | 점 없는 확장자 (`jsx`)                                          |
 | `{{extWithDot}}`        | 점이 포함된 확장자 (`.jsx`)                                     |
-| `{{dir}}`               | 원본 파일의 폴더                                                |
+| `{{dir}}`               | 원본 경로의 폴더                                                |
 | `{{currentPath}}`       | 현재 열려 있는 파일의 전체 경로                                 |
 | `{{currentDir}}`        | 현재 열려 있는 파일의 폴더                                      |
 
 ---
 
-# 🎛️ 추가 옵션
+## 🎛️ 추가 옵션
 
-## 매칭되는 규칙만 표시
-
-기본값
+### 매칭되는 규칙만 표시
 
 ```json
-"smartPaste.showOnlyMatchedRules": true
+"smartTransformer.showOnlyMatchedRules": true
 ```
 
 `false`로 변경하면 모든 규칙을 표시합니다.
 
----
-
-## 선택 취소 시 일반 붙여넣기
-
-기본값
+### 선택 취소 시 일반 붙여넣기
 
 ```json
-"smartPaste.fallbackToPlainPaste": true
+"smartTransformer.fallbackToPlainPaste": true
 ```
 
-Smart Paste에서 Quick Pick을 취소하거나 매칭되는 규칙이 없으면 일반 붙여넣기처럼 클립보드 내용을 그대로 삽입합니다.
-
-Smart Transform에는 적용되지 않습니다.
+Smart Paste에서 규칙 선택을 취소했을 때 클립보드 텍스트를 그대로 삽입합니다. Smart Transform에는 적용되지 않습니다.
 
 ---
 
-# 📄 License
+## 📄 License
 
 MIT
