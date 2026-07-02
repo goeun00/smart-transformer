@@ -1,0 +1,116 @@
+{
+  "name": "smart-paste-transformer",
+  "displayName": "Smart Paste Transformer",
+  "description": "Clipboard text/path transformer with regex rules, Quick Pick, and current-file relative path variables.",
+  "version": "0.0.5",
+  "publisher": "local",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:smartPaste.transformPaste"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "smartPaste.transformPaste",
+        "title": "Smart Paste: Transform Paste"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "smartPaste.transformPaste",
+        "key": "ctrl+shift+v",
+        "when": "editorTextFocus"
+      }
+    ],
+    "configuration": {
+      "title": "Smart Paste Transformer",
+      "properties": {
+        "smartPaste.rules": {
+          "type": "object",
+          "default": {
+            "Component import": {
+              "find": "\\.(astro|jsx|tsx|js|ts|mjs|cjs)$",
+              "replace": "import {{pascalName}} from '{{relativePathAuto}}';",
+              "flags": "i",
+              "mode": "template"
+            },
+            "Style import": {
+              "find": "\\.(css|scss|sass|less)$",
+              "replace": "import '{{relativePath}}';",
+              "flags": "i",
+              "mode": "template"
+            },
+            "줄바꿈 → li": {
+              "find": "^(.+)$",
+              "replace": "<li>$1</li>",
+              "flags": "gm"
+            }
+          },
+          "description": "변환 규칙입니다. 객체의 key가 Quick Pick에 표시되는 이름입니다.",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "find": {
+                "type": "string",
+                "description": "찾을 정규식 패턴입니다."
+              },
+              "replace": {
+                "type": "string",
+                "description": "치환할 템플릿입니다. $1 같은 정규식 캡처와 {{relativePath}} 같은 변수를 사용할 수 있습니다."
+              },
+              "flags": {
+                "type": "string",
+                "default": "",
+                "description": "정규식 플래그입니다. 예: g, i, m, gm, gi"
+              },
+              "mode": {
+                "type": "string",
+                "enum": [
+                  "replace",
+                  "template"
+                ],
+                "default": "replace",
+                "description": "replace는 원문에서 find 부분만 치환하고, template은 replace 결과만 삽입합니다. import처럼 원본 경로를 없애야 하면 template을 사용하세요."
+              }
+            },
+            "required": [
+              "find",
+              "replace"
+            ]
+          }
+        },
+        "smartPaste.showOnlyMatchedRules": {
+          "type": "boolean",
+          "default": true,
+          "description": "true면 클립보드 텍스트와 find가 매칭되는 규칙만 Quick Pick에 표시합니다."
+        },
+        "smartPaste.fallbackToPlainPaste": {
+          "type": "boolean",
+          "default": true,
+          "description": "매칭되는 규칙이 없거나 선택을 취소했을 때 일반 붙여넣기처럼 클립보드 텍스트를 삽입합니다."
+        }
+      }
+    },
+    "menus": {
+      "editor/context": [
+        {
+          "command": "smartPaste.transformPaste",
+          "when": "editorTextFocus",
+          "group": "navigation@99"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@vscode/vsce": "^3.0.0"
+  }
+}
