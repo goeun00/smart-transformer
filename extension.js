@@ -366,6 +366,7 @@ function sortDeclarationsInContainer(container, order) {
     container.nodes[slot.index] = sortedDeclarations[index];
   });
 }
+
 function sortCssDeclarations(sourceText, order) {
   if (!Array.isArray(order) || !order.length) {
     vscode.window.showInformationMessage("CSS property order가 설정되어 있지 않아요.");
@@ -481,18 +482,54 @@ async function smartTransform() {
     return;
   }
 
-  const selectedText = editor.document.getText(editor.selection);
-  if (!selectedText) return;
+  const sourceText = editor.document.getText(editor.selection);
+  if (!sourceText) return;
 
   await runTransform({
-    sourceText: selectedText,
+    sourceText: sourceText,
     editor,
     placeHolder: "선택 영역에 적용할 변환 규칙을 선택하세요",
   });
 }
+async function smartCopy() {
+  const editor = vscode.window.activeTextEditor;
+
+  if (!editor) {
+    vscode.window.showInformationMessage("활성화된 에디터가 없어요.");
+    return;
+  }
+
+  const sourceText = editor.selection.isEmpty ? editor.document.uri.fsPath : editor.document.getText(editor.selection);
+
+  if (!sourceText) return;
+
+  const { showOnlyMatchedRules } = getConfig();
+  const rules = getRules();
+  const validRules = getValidRules(sourceText, rules, showOnlyMatchedRules, editor);
+
+  if (!validRules.length) {
+    vscode.window.showInformationMessage("적용 가능한 Smart Transformer 규칙이 없어요.");
+    return;
+  }
+
+  const picked = await pickRule(validRules, "복사할 변환 규칙을 선택하세요");
+
+  if (!picked) return;
+
+  if (picked.rule.error) {
+    vscode.window.showErrorMessage(picked.rule.error);
+    return;
+  }
+
+  const result = applyRule(sourceText, editor, picked.rule);
+
+  await vscode.env.clipboard.writeText(result);
+  vscode.window.showInformationMessage(`Smart Copy 완료: ${picked.rule.name}`);
+}
 
 function activate(context) {
   context.subscriptions.push(
+    vscode.commands.registerCommand("smartTransformer.smartCopy", smartCopy),
     vscode.commands.registerCommand("smartTransformer.smartPaste", smartPaste),
     vscode.commands.registerCommand("smartTransformer.smartTransform", smartTransform),
   );

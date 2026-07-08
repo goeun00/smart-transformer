@@ -15,6 +15,7 @@
 | 기능                | 설명                                                      |
 | ------------------- | --------------------------------------------------------- |
 | **Smart Paste**     | 클립보드 내용을 규칙에 맞게 변환해서 붙여넣습니다.        |
+| **Smart Paste**     | 규칙에 맞게 내용을 클립보드로 복사합니다.                 |
 | **Smart Transform** | 선택한 텍스트를 규칙에 맞게 바로 변환합니다.              |
 | **Regex rules**     | `find`, `replace`, `flags` 기반으로 자유롭게 변환합니다.  |
 | **Relative path**   | 현재 열려 있는 파일 기준으로 상대 경로를 자동 계산합니다. |
@@ -24,16 +25,18 @@
 
 ## ⌨️ 사용 방법
 
-| 명령              | 단축키                                            | 사용 상황                         |
-| ----------------- | ------------------------------------------------- | --------------------------------- |
-| `Smart Paste`     | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>V</kbd> | 클립보드 텍스트/경로 변환 후 삽입 |
-| `Smart Transform` | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd> | 선택 영역을 변환하여 교체         |
+| 명령              | 단축키                                            | 사용 상황                                       |
+| ----------------- | ------------------------------------------------- | ----------------------------------------------- |
+| `Smart Paste`     | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>V</kbd> | 클립보드 텍스트/경로 변환 후 붙여넣기           |
+| `Smart Copy`      | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>C</kbd> | 에디터 텍스트/경로 변환하여 클립보드로 복사하기 |
+| `Smart Transform` | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd> | 선택 영역을 변환하여 교체                       |
 
 우클릭 메뉴에서도 실행할 수 있습니다.
 
 ```txt
-Smart Paste
-Smart Transform
+🦦 Smart Paste ✨
+🦦 Smart Copy ✨
+🦦 Smart Transform ✨
 ```
 
 ---
@@ -283,7 +286,7 @@ import "./button.scss";
   "replace": "",
   "flags": "s",
   "mode": "cssSort",
-  "when": "css"
+  "when": ["css"]
 }
 ```
 

@@ -2,11 +2,11 @@
   "name": "smart-transformer",
   "displayName": "Smart Transformer",
   "description": "Transform clipboard and selected text with regex rules, templates, relative path variables, and CSS declaration sorting.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "goeun",
   "repository": {
     "type": "git",
-    "url": "https://github.com/깃허브아이디/smart-transformer.git"
+    "url": "https://github.com/goeun00/smart-transformer.git"
   },
   "engines": {
     "vscode": "^1.90.0"
@@ -29,6 +29,7 @@
   "icon": "images/icon.png",
   "activationEvents": [
     "onCommand:smartTransformer.smartPaste",
+    "onCommand:smartTransformer.smartCopy",
     "onCommand:smartTransformer.smartTransform"
   ],
   "main": "./extension.js",
@@ -36,19 +37,26 @@
     "commands": [
       {
         "command": "smartTransformer.smartPaste",
-        "title": "🦦 Smart Paste ✨",
-        "group": "1_modification@90"
+        "title": "🦦 Smart Paste ✨"
+      },
+      {
+        "command": "smartTransformer.smartCopy",
+        "title": "🦦 Smart Copy ✨"
       },
       {
         "command": "smartTransformer.smartTransform",
-        "title": "🦦 Smart Transform ✨",
-        "group": "1_modification@91"
+        "title": "🦦 Smart Transform ✨"
       }
     ],
     "keybindings": [
       {
         "command": "smartTransformer.smartPaste",
         "key": "ctrl+shift+v",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "smartTransformer.smartCopy",
+        "key": "ctrl+shift+c",
         "when": "editorTextFocus"
       },
       {
@@ -250,12 +258,17 @@
         {
           "command": "smartTransformer.smartPaste",
           "when": "editorTextFocus",
-          "group": "navigation@99"
+          "group": "1_modification@90"
+        },
+        {
+          "command": "smartTransformer.smartCopy",
+          "when": "editorTextFocus",
+          "group": "1_modification@91"
         },
         {
           "command": "smartTransformer.smartTransform",
           "when": "editorTextFocus && editorHasSelection",
-          "group": "navigation@100"
+          "group": "1_modification@92"
         }
       ]
     }
